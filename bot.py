@@ -138,7 +138,7 @@ class GameSelect(Select):
         jogo = self.jogos[int(self.values[0])]
         embed = discord.Embed(title=jogo['name'], url=jogo['url'], color=0x1b2838)
         embed.add_field(name="💰 Preço", value=jogo['price'], inline=True)
-        embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
+        embed.add_field(name="AppID", value=jogo['appid'], inline=True)
         embed.set_thumbnail(url=jogo['image'])
         embed.set_footer(text="Steam Search • Resultado selecionado")
         await interaction.response.edit_message(embed=embed, view=None)
