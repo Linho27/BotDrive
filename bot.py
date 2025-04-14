@@ -230,10 +230,13 @@ async def list_files(interaction: discord.Interaction):
             await interaction.channel.send("❌ Não foram encontrados ficheiros na pasta.", delete_after=10)
             return
 
+        # Emoji personalizado do bot
+        emoji_str = "<:GDrive:1360019114848026684>"
+
         mensagem = "**Ficheiros encontrados:**\n"
         for f in files:
             link = f"https://drive.google.com/file/d/{f['id']}/view"
-            mensagem += f"🔹 [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}\n"
+            mensagem += f"{emoji_str} [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}\n"
 
         partes = dividir_mensagem(mensagem)
         for parte in partes:
@@ -243,6 +246,7 @@ async def list_files(interaction: discord.Interaction):
 
     except Exception as e:
         await interaction.channel.send(f"❌ Erro ao obter os ficheiros: {e}", delete_after=10)
+
 
 
 # ================================
