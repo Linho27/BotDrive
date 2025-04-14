@@ -147,7 +147,11 @@ async def send_drive_link_for_game(interaction, jogo):
             await perguntar_para_pedir(interaction, jogo)
 
     except Exception as e:
-        await interaction.response.edit_message(content=f"❌ Erro: {e}", embed=None, view=None)
+        try:
+            await interaction.followup.send(content=f"❌ Erro: {e}", ephemeral=True)
+        except Exception as e2:
+            print(f"Erro ao enviar mensagem de erro: {e2}")
+
 
 
 async def perguntar_para_pedir(interaction, jogo):
