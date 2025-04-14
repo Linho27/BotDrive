@@ -323,10 +323,11 @@ async def list_files(interaction: discord.Interaction):
         
         partes = dividir_mensagem(mensagem)
         for parte in partes:
-            await interaction.followup.send(parte, suppress_embeds=True)
+            await interaction.followup.send(parte, suppress_embeds=True, ephemeral=True)
+            await interaction.followup.send("✅ Lista completa enviada.", ephemeral=True, delete_after=5)
 
     except Exception as e:
-        await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True)
+        await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True, delete_after=10)
 
 @client.tree.command(name="cmds", description="Mostra todos os comandos disponíveis do bot")
 async def cmds(interaction: discord.Interaction):
