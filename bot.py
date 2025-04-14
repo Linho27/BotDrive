@@ -141,7 +141,7 @@ async def send_drive_link_for_game(interaction, jogo):
             f = files[0]
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
-            mensagem = f"{emoji_str} [{nome_sem_extensao}]({link}) - {f.get('description', 'Sem descrição')}"
+            mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
             await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
         else:
             await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
@@ -229,7 +229,7 @@ async def list_files(interaction: discord.Interaction):
         for f in files:
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
-            mensagem += f"{emoji_str} [{nome_sem_extensao}]({link}) - {f.get('description', 'Sem descrição')}\n"
+            mensagem += f"{emoji_str} [{nome_sem_extensao}]({link})\n"
         partes = dividir_mensagem(mensagem)
         for parte in partes:
             await interaction.channel.send(parte, suppress_embeds=True)
