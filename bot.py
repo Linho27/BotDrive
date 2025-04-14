@@ -3,9 +3,9 @@
 # ================================
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-# Verificação das variáveis de ambiente essenciais
 required_env_vars = ["TOKEN", "STEAM_API_KEY", "GOOGLE_API_KEY", "GOOGLE_DRIVE_FOLDER_ID", "DISCORD_USER_ID"]
 missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 
@@ -31,7 +31,9 @@ from discord.ui import Select, View, Button
 from concurrent.futures import ThreadPoolExecutor
 import time
 
-# Configuração de sessão com retry
+# ================================
+# 🌐 Sessão HTTP
+# ================================
 session = requests.Session()
 retry = Retry(
     total=3,
@@ -159,7 +161,7 @@ class PedirButton(Button):
     async def callback(self, interaction: discord.Interaction):
         try:
             target_user = await interaction.client.fetch_user(int(DISCORD_USER_ID))
-            
+
             if target_user:
                 embed = discord.Embed(
                     title="📨 NOVO PEDIDO DE JOGO",
@@ -176,14 +178,14 @@ class PedirButton(Button):
                     value=discord.utils.format_dt(discord.utils.utcnow(), "F"),
                     inline=False
                 )
-                
+
                 await target_user.send(embed=embed)
-                
+
                 await interaction.response.send_message(
                     "✅ Seu pedido foi enviado diretamente ao Linho!",
                     ephemeral=True
                 )
-                
+
                 embed = discord.Embed(
                     title="✅ Pedido enviado",
                     description=f"Seu pedido para `{self.nome_jogo}` foi enviado ao Linho!",
@@ -195,7 +197,7 @@ class PedirButton(Button):
                     "❌ Não foi possível encontrar o Linho. Por favor, reporte este erro.",
                     ephemeral=True
                 )
-                
+
         except discord.Forbidden:
             await interaction.response.send_message(
                 "❌ O bot não tem permissão para enviar mensagens ao Linho.",
@@ -227,16 +229,16 @@ async def send_drive_link_for_game(interaction, jogo):
         else:
             view = View()
             view.add_item(PedirButton(jogo['name'], jogo['appid']))
-            
+
             embed = discord.Embed(
                 title="❌ Ficheiro não encontrado",
                 description=f"Não encontrei o jogo `{jogo['name']}` na Drive.\nDeseja pedir que seja adicionado?",
                 color=0xff0000
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
-            
+
             await interaction.response.edit_message(embed=embed, view=view)
-            
+
     except Exception as e:
         await interaction.response.edit_message(content=f"❌ Erro: {e}", embed=None, view=None)
 
@@ -304,9 +306,6 @@ async def search(interaction: discord.Interaction, query: str, max_results: int 
 
 @client.tree.command(name="list", description="Lista os ficheiros da pasta Google Drive")
 async def list_files(interaction: discord.Interaction):
-    # Não deferir a resposta - isso evita a mensagem "Bot está pensando"
-    # Enviar diretamente as mensagens no canal
-    
     url = f"https://www.googleapis.com/drive/v3/files?q=\"{GOOGLE_DRIVE_FOLDER_ID}\" in parents and mimeType != 'application/vnd.google-apps.folder'&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
 
     try:
@@ -314,7 +313,6 @@ async def list_files(interaction: discord.Interaction):
         files = response.json().get("files", [])
 
         if not files:
-            # Envia mensagem temporária apenas para quem executou o comando
             await interaction.response.send_message("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True, delete_after=10)
             return
 
@@ -323,11 +321,9 @@ async def list_files(interaction: discord.Interaction):
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem += f"{emoji_str} [{nome_sem_extensao}]({link})\n"
-        
-        # IMPORTANTE: Primeiro respondemos à interação com uma mensagem vazia
+
         await interaction.response.send_message("A carregar lista...", ephemeral=True, delete_after=0.1)
-        
-        # Depois enviamos as mensagens normais no canal
+
         partes = dividir_mensagem(mensagem)
         for parte in partes:
             await interaction.channel.send(parte, suppress_embeds=True)
