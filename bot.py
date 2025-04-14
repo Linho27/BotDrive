@@ -304,7 +304,9 @@ async def search(interaction: discord.Interaction, query: str, max_results: int 
 
 @client.tree.command(name="list", description="Lista os ficheiros da pasta Google Drive")
 async def list_files(interaction: discord.Interaction):
-    await interaction.response.defer()
+    # Não deferir a resposta - isso evita a mensagem "Bot está pensando"
+    # Enviar diretamente as mensagens no canal
+    
     url = f"https://www.googleapis.com/drive/v3/files?q=\"{GOOGLE_DRIVE_FOLDER_ID}\" in parents and mimeType != 'application/vnd.google-apps.folder'&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
 
     try:
@@ -312,7 +314,8 @@ async def list_files(interaction: discord.Interaction):
         files = response.json().get("files", [])
 
         if not files:
-            await interaction.followup.send("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True, delete_after=10)
+            # Envia mensagem temporária apenas para quem executou o comando
+            await interaction.response.send_message("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True, delete_after=10)
             return
 
         mensagem = "**Ficheiros encontrados:**\n"
@@ -321,15 +324,16 @@ async def list_files(interaction: discord.Interaction):
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem += f"{emoji_str} [{nome_sem_extensao}]({link})\n"
         
+        # IMPORTANTE: Primeiro respondemos à interação com uma mensagem vazia
+        await interaction.response.send_message("A carregar lista...", ephemeral=True, delete_after=0.1)
+        
+        # Depois enviamos as mensagens normais no canal
         partes = dividir_mensagem(mensagem)
         for parte in partes:
-            await interaction.followup.send(parte, suppress_embeds=True)
-
-        # Mensagem que será apagada após 5 segundos
-        await interaction.followup.send("✅ Lista completa enviada.", delete_after=5)
+            await interaction.channel.send(parte, suppress_embeds=True)
 
     except Exception as e:
-        await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True, delete_after=10)
+        await interaction.response.send_message(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True, delete_after=10)
 
 @client.tree.command(name="cmds", description="Mostra todos os comandos disponíveis do bot")
 async def cmds(interaction: discord.Interaction):
