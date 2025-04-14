@@ -9,6 +9,7 @@ TOKEN = os.getenv("TOKEN")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+emoji_str = "<:GDrive:1360019114848026684>"
 
 # ================================
 # 📦 Imports
@@ -139,15 +140,8 @@ async def send_drive_link_for_game(interaction, jogo):
         if files:
             f = files[0]
             link = f"https://drive.google.com/file/d/{f['id']}/view"
-            embed = discord.Embed(
-                title=f"📂 Ficheiro para: {jogo['name']}",
-                description=f"[🔗 Abrir ficheiro]({link})",
-                color=0x34a853
-            )
-            embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
-            embed.add_field(name="💬 Descrição", value=f.get("description", "Sem descrição"), inline=True)
-            embed.set_footer(text="Google Drive • Resultado encontrado")
-            await interaction.response.edit_message(embed=embed, view=None)
+            mensagem = f"<:GDrive:123456789012345678> [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}"
+            await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
         else:
             await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
     except Exception as e:
@@ -229,9 +223,6 @@ async def list_files(interaction: discord.Interaction):
         if not files:
             await interaction.channel.send("❌ Não foram encontrados ficheiros na pasta.", delete_after=10)
             return
-
-        # Emoji personalizado do bot
-        emoji_str = "<:GDrive:1360019114848026684>"
 
         mensagem = "**Ficheiros encontrados:**\n"
         for f in files:
