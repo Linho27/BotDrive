@@ -9,16 +9,15 @@ TOKEN = os.getenv("TOKEN")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
-DISCORD_USER_ID = int(os.getenv("DISCORD_USER_ID"))
 emoji_str = "<:GDrive:1360019114848026684>"
 
 # ================================
-# 📆 Imports
+# 📦 Imports
 # ================================
 import requests
 import discord
 from discord import app_commands
-from discord.ui import Select, View, Button
+from discord.ui import Select, View
 from concurrent.futures import ThreadPoolExecutor
 
 # ================================
@@ -48,8 +47,22 @@ client = MyClient()
 # ================================
 # 🔍 Funções de pesquisa
 # ================================
-async def is_dlc_async(appid):
-    return await asyncio.to_thread(is_dlc, appid)
+def is_dlc(appid):
+    try:
+        response = requests.get("https://store.steampowered.com/api/appdetails", params={
+            'appids': appid,
+            'l': 'portuguese'
+        })
+        data = response.json().get(str(appid), {})
+        if data.get('success'):
+            app_data = data.get('data', {})
+            if app_data.get('type') == 'dlc' or any(cat.get('description') == 'DLC' for cat in app_data.get('categories', [])):
+                return True
+        return False
+    except Exception as e:
+        print(f"Erro ao verificar DLC {appid}: {e}")
+        return False
+
 
 async def search_steam_games(query, max_results=5):
     try:
@@ -65,25 +78,24 @@ async def search_steam_games(query, max_results=5):
         preliminares = [item for item in data.get('items', []) if all(k not in item['name'].lower() for k in ['dlc', 'pack', 'expansion', 'content'])][:10]
 
         resultados = []
-        for item in preliminares:
-            if not await is_dlc_async(item['id']):
-                preco = "Gratuito"
-                if item.get('price'):
-                    preco = f"{item['price']['final'] / 100:.2f}€"
-                    if item['price'].get('discount_percent', 0) > 0:
-                        preco += f" (🔥 -{item['price']['discount_percent']}%)"
-                resultados.append({
-                    'name': item['name'],
-                    'appid': item['id'],
-                    'price': preco,
-                    'url': f"https://store.steampowered.com/app/{item['id']}",
-                    'image': item['tiny_image']
-                })
-                if len(resultados) >= max_results:
-                    break
-
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for item in preliminares:
+                if not is_dlc(item['id']):
+                    preco = "Gratuito"
+                    if item.get('price'):
+                        preco = f"{item['price']['final'] / 100:.2f}€"
+                        if item['price'].get('discount_percent', 0) > 0:
+                            preco += f" (🔥 -{item['price']['discount_percent']}%)"
+                    resultados.append({
+                        'name': item['name'],
+                        'appid': item['id'],
+                        'price': preco,
+                        'url': f"https://store.steampowered.com/app/{item['id']}",
+                        'image': item['tiny_image']
+                    })
+                    if len(resultados) >= max_results:
+                        break
         return resultados
-
     except Exception as e:
         print(f"Erro na pesquisa Steam: {e}")
         return None
@@ -114,6 +126,7 @@ class FileSelect(GameSelect):
         jogo = self.jogos[int(self.values[0])]
         await send_drive_link_for_game(interaction, jogo)
 
+
 # ================================
 # 📁 Google Drive
 # ================================
@@ -129,51 +142,14 @@ async def send_drive_link_for_game(interaction, jogo):
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
-            try:
-                if not interaction.response.is_done():
-                    await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
-                else:
-                    await interaction.followup.send(content=mensagem, ephemeral=True, suppress_embeds=True)
-            except discord.NotFound:
-                print(f"[IGNORADO] Interaction expirada ao tentar enviar link para {jogo['name']}")
+            await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
         else:
-            await perguntar_para_pedir(interaction, jogo)
-
+            await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
     except Exception as e:
-        erro_msg = f"❌ Erro: {e}"
-        try:
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(content=erro_msg, embed=None, view=None)
-            else:
-                await interaction.followup.send(content=erro_msg, ephemeral=True)
-        except discord.NotFound:
-            print(f"[IGNORADO] Interaction expirada ao tentar enviar mensagem de erro: {erro_msg}")
-
-async def perguntar_para_pedir(interaction, jogo):
-    class ConfirmarPedido(View):
-        def __init__(self):
-            super().__init__()
-            self.value = None
-
-        @discord.ui.button(label="Sim, pedir jogo", style=discord.ButtonStyle.success)
-        async def confirmar(self, interaction: discord.Interaction, button: Button):
-            await interaction.response.send_message(f"✉️ Pedido enviado para o administrador.", ephemeral=True)
-            user = await client.fetch_user(DISCORD_USER_ID)
-            await user.send(f"☑️ Pedido de jogo: `{jogo['name']}` (AppID: {jogo['appid']})")
-            self.value = True
-            self.stop()
-
-        @discord.ui.button(label="Cancelar", style=discord.ButtonStyle.danger)
-        async def cancelar(self, interaction: discord.Interaction, button: Button):
-            await interaction.response.send_message("❌ Pedido cancelado.", ephemeral=True)
-            self.value = False
-            self.stop()
-
-    view = ConfirmarPedido()
-    await interaction.followup.send(f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`. Queres pedir este jogo ao admin?", view=view, ephemeral=True)
+        await interaction.response.edit_message(content=f"❌ Erro: {e}", embed=None, view=None)
 
 # ================================
-# ⚖️ Utilitários
+# 🔧 Utilitários
 # ================================
 def dividir_mensagem(msg, limite=1900):
     linhas = msg.split('\n')
@@ -204,7 +180,7 @@ async def steam(interaction, query: str, max_results: int = 3):
         jogo = resultados[0]
         embed = discord.Embed(title=jogo['name'], url=jogo['url'], color=0x1b2838)
         embed.add_field(name="💰 Preço", value=jogo['price'], inline=True)
-        embed.add_field(name="AppID", value=jogo['appid'], inline=True)
+        embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
         embed.set_thumbnail(url=jogo['image'])
         embed.set_footer(text="Steam Search • Resultado único")
         await interaction.followup.send(embed=embed)
