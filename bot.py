@@ -142,10 +142,13 @@ async def send_drive_link_for_game(interaction, jogo):
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
-            else:
-                await interaction.followup.send(content=mensagem, ephemeral=True, suppress_embeds=True)
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
+                else:
+                    await interaction.followup.send(content=mensagem, ephemeral=True, suppress_embeds=True)
+            except discord.NotFound:
+                print(f"[IGNORADO] Interaction expirada ao tentar enviar link para {jogo['name']}")
         else:
             await perguntar_para_pedir(interaction, jogo)
 
@@ -156,11 +159,8 @@ async def send_drive_link_for_game(interaction, jogo):
                 await interaction.response.edit_message(content=erro_msg, embed=None, view=None)
             else:
                 await interaction.followup.send(content=erro_msg, ephemeral=True)
-        except Exception as e2:
-            print(f"Erro ao enviar mensagem de erro: {e2}")
-
-
-
+        except discord.NotFound:
+            print(f"[IGNORADO] Interaction expirada ao tentar enviar mensagem de erro: {erro_msg}")
 
 async def perguntar_para_pedir(interaction, jogo):
     class ConfirmarPedido(View):
