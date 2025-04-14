@@ -312,7 +312,7 @@ async def list_files(interaction: discord.Interaction):
         files = response.json().get("files", [])
 
         if not files:
-            await interaction.followup.send("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True)
+            await interaction.followup.send("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True, delete_after=10)
             return
 
         mensagem = "**Ficheiros encontrados:**\n"
@@ -324,7 +324,9 @@ async def list_files(interaction: discord.Interaction):
         partes = dividir_mensagem(mensagem)
         for parte in partes:
             await interaction.followup.send(parte, suppress_embeds=True, ephemeral=True)
-            await interaction.followup.send("✅ Lista completa enviada.", ephemeral=True, delete_after=5)
+
+        # Mensagem que será apagada após 5 segundos
+        await interaction.followup.send("✅ Lista completa enviada.", ephemeral=True, delete_after=5)
 
     except Exception as e:
         await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True, delete_after=10)
