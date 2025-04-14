@@ -47,22 +47,8 @@ client = MyClient()
 # ================================
 # 🔍 Funções de pesquisa
 # ================================
-def is_dlc(appid):
-    try:
-        response = requests.get("https://store.steampowered.com/api/appdetails", params={
-            'appids': appid,
-            'l': 'portuguese'
-        })
-        data = response.json().get(str(appid), {})
-        if data.get('success'):
-            app_data = data.get('data', {})
-            if app_data.get('type') == 'dlc' or any(cat.get('description') == 'DLC' for cat in app_data.get('categories', [])):
-                return True
-        return False
-    except Exception as e:
-        print(f"Erro ao verificar DLC {appid}: {e}")
-        return False
-
+async def is_dlc_async(appid):
+    return await asyncio.to_thread(is_dlc, appid)
 
 async def search_steam_games(query, max_results=5):
     try:
@@ -78,24 +64,25 @@ async def search_steam_games(query, max_results=5):
         preliminares = [item for item in data.get('items', []) if all(k not in item['name'].lower() for k in ['dlc', 'pack', 'expansion', 'content'])][:10]
 
         resultados = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            for item in preliminares:
-                if not is_dlc(item['id']):
-                    preco = "Gratuito"
-                    if item.get('price'):
-                        preco = f"{item['price']['final'] / 100:.2f}€"
-                        if item['price'].get('discount_percent', 0) > 0:
-                            preco += f" (🔥 -{item['price']['discount_percent']}%)"
-                    resultados.append({
-                        'name': item['name'],
-                        'appid': item['id'],
-                        'price': preco,
-                        'url': f"https://store.steampowered.com/app/{item['id']}",
-                        'image': item['tiny_image']
-                    })
-                    if len(resultados) >= max_results:
-                        break
+        for item in preliminares:
+            if not await is_dlc_async(item['id']):
+                preco = "Gratuito"
+                if item.get('price'):
+                    preco = f"{item['price']['final'] / 100:.2f}€"
+                    if item['price'].get('discount_percent', 0) > 0:
+                        preco += f" (🔥 -{item['price']['discount_percent']}%)"
+                resultados.append({
+                    'name': item['name'],
+                    'appid': item['id'],
+                    'price': preco,
+                    'url': f"https://store.steampowered.com/app/{item['id']}",
+                    'image': item['tiny_image']
+                })
+                if len(resultados) >= max_results:
+                    break
+
         return resultados
+
     except Exception as e:
         print(f"Erro na pesquisa Steam: {e}")
         return None
