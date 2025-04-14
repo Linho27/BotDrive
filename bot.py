@@ -114,7 +114,7 @@ class GameSelect(Select):
         jogo = self.jogos[int(self.values[0])]
         embed = discord.Embed(title=jogo['name'], url=jogo['url'], color=0x1b2838)
         embed.add_field(name="💰 Preço", value=jogo['price'], inline=True)
-        embed.add_field(name="AppID", value=jogo['appid'], inline=True)
+        embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
         embed.set_thumbnail(url=jogo['image'])
         embed.set_footer(text="Steam Search • Resultado selecionado")
         await interaction.response.edit_message(embed=embed, view=None)
@@ -139,8 +139,15 @@ async def send_drive_link_for_game(interaction, jogo):
         if files:
             f = files[0]
             link = f"https://drive.google.com/file/d/{f['id']}/view"
-            mensagem = f"<:GDrive:123456789012345678> [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}"
-            await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
+            embed = discord.Embed(
+                title=f"📂 Ficheiro para: {jogo['name']}",
+                description=f"[🔗 Abrir ficheiro]({link})",
+                color=0x34a853
+            )
+            embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
+            embed.add_field(name="💬 Descrição", value=f.get("description", "Sem descrição"), inline=True)
+            embed.set_footer(text="Google Drive • Resultado encontrado")
+            await interaction.response.edit_message(embed=embed, view=None)
         else:
             await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
     except Exception as e:
@@ -178,7 +185,7 @@ async def steam(interaction, query: str, max_results: int = 3):
         jogo = resultados[0]
         embed = discord.Embed(title=jogo['name'], url=jogo['url'], color=0x1b2838)
         embed.add_field(name="💰 Preço", value=jogo['price'], inline=True)
-        embed.add_field(name="AppID", value=jogo['appid'], inline=True)
+        embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
         embed.set_thumbnail(url=jogo['image'])
         embed.set_footer(text="Steam Search • Resultado único")
         await interaction.followup.send(embed=embed)
@@ -226,7 +233,7 @@ async def list_files(interaction: discord.Interaction):
         mensagem = "**Ficheiros encontrados:**\n"
         for f in files:
             link = f"https://drive.google.com/file/d/{f['id']}/view"
-            mensagem += f"<:GDrive:123456789012345678> [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}\n"
+            mensagem += f"🔹 [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}\n"
 
         partes = dividir_mensagem(mensagem)
         for parte in partes:
