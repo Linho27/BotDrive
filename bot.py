@@ -342,7 +342,7 @@ async def cmds(interaction: discord.Interaction):
     embed.add_field(name="/cmds", value="📜 Mostra esta lista de comandos", inline=False)
 
     embed.set_footer(text="Bot de Utilidades Steam + Google Drive")
-    await interaction.followup.send(embed=embed, ephemeral=True)
+    await interaction.response.send_message(embed=embed) 
 
 # ================================
 # ▶️ Executar bot
