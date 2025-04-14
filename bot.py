@@ -180,25 +180,25 @@ class PedirButton(Button):
                 await target_user.send(embed=embed)
                 
                 await interaction.response.send_message(
-                    "✅ Seu pedido foi enviado diretamente ao administrador!",
+                    "✅ Seu pedido foi enviado diretamente ao Linho!",
                     ephemeral=True
                 )
                 
                 embed = discord.Embed(
                     title="✅ Pedido enviado",
-                    description=f"Seu pedido para `{self.nome_jogo}` foi enviado ao administrador!",
+                    description=f"Seu pedido para `{self.nome_jogo}` foi enviado ao Linho!",
                     color=0x00ff00
                 )
                 await interaction.message.edit(embed=embed, view=None)
             else:
                 await interaction.response.send_message(
-                    "❌ Não foi possível encontrar o administrador. Por favor, reporte este erro.",
+                    "❌ Não foi possível encontrar o Linho. Por favor, reporte este erro.",
                     ephemeral=True
                 )
                 
         except discord.Forbidden:
             await interaction.response.send_message(
-                "❌ O bot não tem permissão para enviar mensagens ao administrador.",
+                "❌ O bot não tem permissão para enviar mensagens ao Linho.",
                 ephemeral=True
             )
         except Exception as e:
@@ -272,7 +272,7 @@ async def steam(interaction, query: str, max_results: int = 3):
         jogo = resultados[0]
         embed = discord.Embed(title=jogo['name'], url=jogo['url'], color=0x1b2838)
         embed.add_field(name="💰 Preço", value=jogo['price'], inline=True)
-        embed.add_field(name="🄐 AppID", value=jogo['appid'], inline=True)
+        embed.add_field(name="AppID", value=jogo['appid'], inline=True)
         embed.set_thumbnail(url=jogo['image'])
         embed.set_footer(text="Steam Search • Resultado único")
         await interaction.followup.send(embed=embed)
