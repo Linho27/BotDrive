@@ -5,20 +5,42 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+# Verificação das variáveis de ambiente essenciais
+required_env_vars = ["TOKEN", "STEAM_API_KEY", "GOOGLE_API_KEY", "GOOGLE_DRIVE_FOLDER_ID", "DISCORD_USER_ID"]
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+
+if missing_vars:
+    raise EnvironmentError(f"Variáveis de ambiente ausentes: {', '.join(missing_vars)}")
+
 TOKEN = os.getenv("TOKEN")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
+DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 emoji_str = "<:GDrive:1360019114848026684>"
 
 # ================================
 # 📦 Imports
 # ================================
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import discord
 from discord import app_commands
-from discord.ui import Select, View
+from discord.ui import Select, View, Button
 from concurrent.futures import ThreadPoolExecutor
+import time
+
+# Configuração de sessão com retry
+session = requests.Session()
+retry = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[500, 502, 503, 504]
+)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 # ================================
 # 🤖 Cliente Discord
@@ -29,6 +51,7 @@ class MyClient(discord.Client):
         intents.message_content = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
+        self.start_time = time.time()
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -41,7 +64,6 @@ class MyClient(discord.Client):
         ))
         print(f'✅ Bot conectado como {self.user}')
 
-
 client = MyClient()
 
 # ================================
@@ -49,7 +71,7 @@ client = MyClient()
 # ================================
 def is_dlc(appid):
     try:
-        response = requests.get("https://store.steampowered.com/api/appdetails", params={
+        response = session.get("https://store.steampowered.com/api/appdetails", params={
             'appids': appid,
             'l': 'portuguese'
         })
@@ -63,10 +85,9 @@ def is_dlc(appid):
         print(f"Erro ao verificar DLC {appid}: {e}")
         return False
 
-
 async def search_steam_games(query, max_results=5):
     try:
-        response = requests.get("https://store.steampowered.com/api/storesearch", params={
+        response = session.get("https://store.steampowered.com/api/storesearch", params={
             'term': query,
             'l': 'portuguese',
             'cc': 'pt',
@@ -101,7 +122,7 @@ async def search_steam_games(query, max_results=5):
         return None
 
 # ================================
-# 📋 Componente de seleção
+# 📋 Componentes de UI
 # ================================
 class GameSelect(Select):
     def __init__(self, jogos):
@@ -120,12 +141,72 @@ class GameSelect(Select):
         embed.set_footer(text="Steam Search • Resultado selecionado")
         await interaction.response.edit_message(embed=embed, view=None)
 
-
 class FileSelect(GameSelect):
     async def callback(self, interaction):
         jogo = self.jogos[int(self.values[0])]
         await send_drive_link_for_game(interaction, jogo)
 
+class PedirButton(Button):
+    def __init__(self, nome_jogo: str, appid: int):
+        super().__init__(
+            label="Pedir Jogo",
+            style=discord.ButtonStyle.green,
+            emoji="📨"
+        )
+        self.nome_jogo = nome_jogo
+        self.appid = appid
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            target_user = await interaction.client.fetch_user(int(DISCORD_USER_ID))
+            
+            if target_user:
+                embed = discord.Embed(
+                    title="📨 NOVO PEDIDO DE JOGO",
+                    description=f"**Jogo:** {self.nome_jogo}\n**AppID:** {self.appid}",
+                    color=0x00ff00
+                )
+                embed.add_field(
+                    name="👤 Usuário Solicitante", 
+                    value=f"{interaction.user.mention} (`{interaction.user.id}`)",
+                    inline=False
+                )
+                embed.add_field(
+                    name="📅 Data", 
+                    value=discord.utils.format_dt(discord.utils.utcnow(), "F"),
+                    inline=False
+                )
+                
+                await target_user.send(embed=embed)
+                
+                await interaction.response.send_message(
+                    "✅ Seu pedido foi enviado diretamente ao administrador!",
+                    ephemeral=True
+                )
+                
+                embed = discord.Embed(
+                    title="✅ Pedido enviado",
+                    description=f"Seu pedido para `{self.nome_jogo}` foi enviado ao administrador!",
+                    color=0x00ff00
+                )
+                await interaction.message.edit(embed=embed, view=None)
+            else:
+                await interaction.response.send_message(
+                    "❌ Não foi possível encontrar o administrador. Por favor, reporte este erro.",
+                    ephemeral=True
+                )
+                
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "❌ O bot não tem permissão para enviar mensagens ao administrador.",
+                ephemeral=True
+            )
+        except Exception as e:
+            await interaction.response.send_message(
+                "❌ Ocorreu um erro ao enviar seu pedido. Tente novamente mais tarde.",
+                ephemeral=True
+            )
+            print(f"Erro ao enviar pedido: {e}")
 
 # ================================
 # 📁 Google Drive
@@ -134,7 +215,7 @@ async def send_drive_link_for_game(interaction, jogo):
     try:
         query = f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and fullText contains '{jogo['appid']}' and mimeType != 'application/vnd.google-apps.folder'"
         url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(query)}&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
-        response = requests.get(url)
+        response = session.get(url)
         files = response.json().get("files", [])
 
         if files:
@@ -144,7 +225,18 @@ async def send_drive_link_for_game(interaction, jogo):
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
             await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
         else:
-            await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
+            view = View()
+            view.add_item(PedirButton(jogo['name'], jogo['appid']))
+            
+            embed = discord.Embed(
+                title="❌ Ficheiro não encontrado",
+                description=f"Não encontrei o jogo `{jogo['name']}` na Drive.\nDeseja pedir que seja adicionado?",
+                color=0xff0000
+            )
+            embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
+            
+            await interaction.response.edit_message(embed=embed, view=view)
+            
     except Exception as e:
         await interaction.response.edit_message(content=f"❌ Erro: {e}", embed=None, view=None)
 
@@ -191,10 +283,9 @@ async def steam(interaction, query: str, max_results: int = 3):
         embed.set_footer(text="Steam Search • Selecione uma opção")
         await interaction.followup.send(embed=embed, view=view)
 
-
 @client.tree.command(name="search", description="Pesquisa um jogo e mostra ficheiro do Google Drive")
 @app_commands.describe(query="Nome do jogo", max_results="Resultados (1-10)")
-async def search(interaction, query: str, max_results: int = 5):
+async def search(interaction: discord.Interaction, query: str, max_results: int = 5):
     await interaction.response.defer()
     max_results = max(1, min(10, max_results))
     resultados = await search_steam_games(query, max_results)
@@ -211,18 +302,17 @@ async def search(interaction, query: str, max_results: int = 5):
         embed.set_footer(text="Google Drive • Selecione uma opção")
         await interaction.followup.send(embed=embed, view=view)
 
-
 @client.tree.command(name="list", description="Lista os ficheiros da pasta Google Drive")
 async def list_files(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     url = f"https://www.googleapis.com/drive/v3/files?q=\"{GOOGLE_DRIVE_FOLDER_ID}\" in parents and mimeType != 'application/vnd.google-apps.folder'&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
 
     try:
-        response = requests.get(url)
+        response = session.get(url)
         files = response.json().get("files", [])
 
         if not files:
-            await interaction.channel.send("❌ Não foram encontrados ficheiros na pasta.", delete_after=10)
+            await interaction.followup.send("❌ Não foram encontrados ficheiros na pasta.", ephemeral=True)
             return
 
         mensagem = "**Ficheiros encontrados:**\n"
@@ -230,15 +320,13 @@ async def list_files(interaction: discord.Interaction):
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem += f"{emoji_str} [{nome_sem_extensao}]({link})\n"
+        
         partes = dividir_mensagem(mensagem)
         for parte in partes:
-            await interaction.channel.send(parte, suppress_embeds=True)
-
-        await interaction.channel.send("✅ Lista enviada.", delete_after=2)
+            await interaction.followup.send(parte, suppress_embeds=True, ephemeral=True)
 
     except Exception as e:
-        await interaction.channel.send(f"❌ Erro ao obter os ficheiros: {e}", delete_after=10)
-
+        await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True)
 
 @client.tree.command(name="cmds", description="Mostra todos os comandos disponíveis do bot")
 async def cmds(interaction: discord.Interaction):
