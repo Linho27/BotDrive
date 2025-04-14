@@ -37,7 +37,7 @@ class MyClient(discord.Client):
     async def on_ready(self):
         await self.change_presence(activity=discord.Activity(
             type=discord.ActivityType.watching,
-            name="comandos /steam, /ficheiro e /list"
+            name="/cmds para mais info"
         ))
         print(f'✅ Bot conectado como {self.user}')
 
@@ -140,7 +140,7 @@ async def send_drive_link_for_game(interaction, jogo):
         if files:
             f = files[0]
             link = f"https://drive.google.com/file/d/{f['id']}/view"
-            mensagem = f"<:GDrive:123456789012345678> [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}"
+            mensagem = f"{emoji_str} [{f['name']}]({link}) - {f.get('description', 'Sem descrição')}"
             await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
         else:
             await interaction.response.edit_message(content=f"❌ Nenhum ficheiro encontrado para `{jogo['name']}`.", embed=None, view=None)
@@ -191,9 +191,9 @@ async def steam(interaction, query: str, max_results: int = 3):
         await interaction.followup.send(embed=embed, view=view)
 
 
-@client.tree.command(name="ficheiro", description="Pesquisa um jogo e mostra ficheiro do Google Drive")
+@client.tree.command(name="search", description="Pesquisa um jogo e mostra ficheiro do Google Drive")
 @app_commands.describe(query="Nome do jogo", max_results="Resultados (1-10)")
-async def ficheiro(interaction, query: str, max_results: int = 5):
+async def search(interaction, query: str, max_results: int = 5):
     await interaction.response.defer()
     max_results = max(1, min(10, max_results))
     resultados = await search_steam_games(query, max_results)
@@ -239,6 +239,21 @@ async def list_files(interaction: discord.Interaction):
         await interaction.channel.send(f"❌ Erro ao obter os ficheiros: {e}", delete_after=10)
 
 
+@client.tree.command(name="cmds", description="Mostra todos os comandos disponíveis do bot")
+async def cmds(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="📜 Comandos disponíveis",
+        description="Aqui estão os comandos que podes usar:",
+        color=0x5865F2
+    )
+
+    embed.add_field(name="/steam", value="🔍 Pesquisa jogos na Steam", inline=False)
+    embed.add_field(name="/search", value="📁 Pesquisa jogo e mostra ficheiro do Google Drive", inline=False)
+    embed.add_field(name="/list", value="🗂️ Lista todos os ficheiros disponíveis no Google Drive", inline=False)
+    embed.add_field(name="/cmds", value="📜 Mostra esta lista de comandos", inline=False)
+
+    embed.set_footer(text="Bot de Utilidades Steam + Google Drive")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ================================
 # ▶️ Executar bot
