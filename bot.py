@@ -304,7 +304,7 @@ async def search(interaction: discord.Interaction, query: str, max_results: int 
 
 @client.tree.command(name="list", description="Lista os ficheiros da pasta Google Drive")
 async def list_files(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
+    await interaction.response.defer()
     url = f"https://www.googleapis.com/drive/v3/files?q=\"{GOOGLE_DRIVE_FOLDER_ID}\" in parents and mimeType != 'application/vnd.google-apps.folder'&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
 
     try:
@@ -323,10 +323,10 @@ async def list_files(interaction: discord.Interaction):
         
         partes = dividir_mensagem(mensagem)
         for parte in partes:
-            await interaction.followup.send(parte, suppress_embeds=True, ephemeral=True)
+            await interaction.followup.send(parte, suppress_embeds=True)
 
         # Mensagem que será apagada após 5 segundos
-        await interaction.followup.send("✅ Lista completa enviada.", ephemeral=True, delete_after=5)
+        await interaction.followup.send("✅ Lista completa enviada.", delete_after=5)
 
     except Exception as e:
         await interaction.followup.send(f"❌ Erro ao obter os ficheiros: {e}", ephemeral=True, delete_after=10)
