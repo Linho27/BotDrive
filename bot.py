@@ -227,15 +227,16 @@ async def send_drive_link_for_game(interaction, jogo):
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
 
             try:
-                await interaction.edit_original_response(content=mensagem, embed=None, view=None)
-                await interaction.original_response().edit(suppress=True)
-            except discord.NotFound:
-                await interaction.followup.send(content=mensagem, suppress_embeds=True, ephemeral=True)
+                if interaction.response.is_done():
+                    await interaction.followup.send(content=mensagem, suppress_embeds=True, ephemeral=True)
+                else:
+                    await interaction.response.send_message(content=mensagem, ephemeral=True, suppress_embeds=True)
+            except Exception as e:
+                print(f"[ERRO] A enviar mensagem: {e}")
 
         else:
             view = View()
             view.add_item(PedirButton(jogo['name'], jogo['appid']))
-
             embed = discord.Embed(
                 title="❌ Ficheiro não encontrado",
                 description=f"Não encontrei o jogo {jogo['name']} na Drive.\nDesejas pedir que seja adicionado?",
@@ -244,17 +245,22 @@ async def send_drive_link_for_game(interaction, jogo):
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
             try:
-                await interaction.edit_original_response(embed=embed, view=view)
-            except discord.NotFound:
-                await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+                if interaction.response.is_done():
+                    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+                else:
+                    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            except Exception as e:
+                print(f"[ERRO] A enviar embed: {e}")
 
     except Exception as e:
         erro_msg = f"❌ Erro: {e}"
         try:
-            await interaction.edit_original_response(content=erro_msg, embed=None, view=None)
-        except:
-            await interaction.followup.send(content=erro_msg, ephemeral=True)
-
+            if interaction.response.is_done():
+                await interaction.followup.send(content=erro_msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(content=erro_msg, ephemeral=True)
+        except Exception as e2:
+            print(f"[ERRO FATAL] A enviar mensagem de erro: {e2}")
 
 # ================================
 # 🔧 Utilitários
