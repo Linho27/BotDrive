@@ -213,64 +213,24 @@ class PedirButton(Button):
 # ================================
 # 📁 Google Drive
 # ================================
-async def send_drive_link_for_game(interaction, jogo):
-    try:
-        # Consulta à API do Google Drive para encontrar o ficheiro correspondente
-        query = f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and fullText contains '{jogo['appid']}' and mimeType != 'application/vnd.google-apps.folder'"
-        url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(query)}&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
-        response = session.get(url)
-        files = response.json().get("files", [])
+@client.tree.command(name="search", description="Pesquisa um jogo e mostra ficheiro do Google Drive")
+@app_commands.describe(query="Nome do jogo", max_results="Resultados (1-10)")
+async def search(interaction: discord.Interaction, query: str, max_results: int = 5):
+    await interaction.response.defer()
+    max_results = max(1, min(10, max_results))
+    resultados = await search_steam_games(query, max_results)
+    if not resultados:
+        await interaction.followup.send("❌ Nenhum jogo encontrado.", ephemeral=True)
+        return
 
-        # Preparar a mensagem que será enviada
-        if files:
-            # Recuperar o ficheiro encontrado
-            f = files[0]
-            link = f"https://drive.google.com/file/d/{f['id']}/view"
-            nome_sem_extensao = os.path.splitext(f['name'])[0]
-            mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"  # Link do arquivo
-
-            # Criar o embed para a mensagem
-            embed = discord.Embed(
-                title=f"Link para o jogo {jogo['name']}",
-                description=mensagem,
-                color=0x1b2838  # Cor do embed
-            )
-            embed.set_footer(text="Google Drive • Ficheiro Encontrado")
-
-            # Se a resposta original não tiver sido já enviada, envia a mensagem com embed
-            if interaction.response.is_done():
-                await interaction.followup.send(content=mensagem, embed=embed, suppress_embeds=True)
-            else:
-                await interaction.response.send_message(content=mensagem, embed=embed, suppress_embeds=True)
-
-        else:
-            # Se não encontrar o ficheiro, envia uma mensagem com embed dizendo que não encontrou
-            view = View()
-            view.add_item(PedirButton(jogo['name'], jogo['appid']))
-            embed = discord.Embed(
-                title="❌ Ficheiro não encontrado",
-                description=f"Não encontrei o jogo {jogo['name']} na Drive.\nDesejas pedir que seja adicionado?",
-                color=0xff0000
-            )
-            embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
-
-            # Enviar tudo numa única mensagem
-            if interaction.response.is_done():
-                await interaction.followup.send(content=mensagem, embed=embed, view=view, suppress_embeds=True)
-            else:
-                await interaction.response.send_message(content=mensagem, embed=embed, view=view, suppress_embeds=True)
-
-    except Exception as e:
-        # Caso ocorra um erro ao tentar procurar ou enviar a mensagem
-        erro_msg = f"❌ Erro: {e}"
-        try:
-            # Enviar uma mensagem de erro visível para todos
-            if interaction.response.is_done():
-                await interaction.followup.send(content=erro_msg)
-            else:
-                await interaction.response.send_message(content=erro_msg)
-        except Exception as e2:
-            print(f"[ERRO FATAL] A enviar mensagem de erro: {e2}")
+    if len(resultados) == 1:
+        await send_drive_link_for_game(interaction, resultados[0])
+    else:
+        view = View()
+        view.add_item(FileSelect(resultados))
+        embed = discord.Embed(title=f"📁 Resultados para: {query}", description="Seleciona um jogo", color=0x1b2838)
+        embed.set_footer(text="Google Drive • Selecione uma opção")
+        await interaction.followup.send(embed=embed, view=view)
 
 # ================================
 # 🔧 Utilitários
@@ -326,62 +286,11 @@ async def search(interaction: discord.Interaction, query: str, max_results: int 
         return
 
     if len(resultados) == 1:
-        jogo = resultados[0]
-        try:
-            # Consulta à API do Google Drive para encontrar o ficheiro correspondente
-            query = f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and fullText contains '{jogo['appid']}' and mimeType != 'application/vnd.google-apps.folder'"
-            url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(query)}&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
-            response = session.get(url)
-            files = response.json().get("files", [])
-
-            if files:
-                # Recuperar o ficheiro encontrado
-                f = files[0]
-                link = f"https://drive.google.com/file/d/{f['id']}/view"
-                nome_sem_extensao = os.path.splitext(f['name'])[0]
-                
-                # Criar embed com todas as informações
-                embed = discord.Embed(
-                    title=f"🔍 {jogo['name']}",
-                    color=0x1b2838
-                )
-                embed.add_field(name="💰 Preço Steam", value=jogo['price'], inline=True)
-                embed.add_field(name="🆔 AppID", value=jogo['appid'], inline=True)
-                embed.add_field(name="📁 Ficheiro Google Drive", value=f"[{nome_sem_extensao}]({link})", inline=False)
-                embed.set_thumbnail(url=jogo['image'])
-                embed.set_footer(text="Resultado da pesquisa")
-                
-                await interaction.followup.send(embed=embed)
-            else:
-                view = View()
-                view.add_item(PedirButton(jogo['name'], jogo['appid']))
-                embed = discord.Embed(
-                    title=f"🔍 {jogo['name']}",
-                    description=f"Não encontrei o jogo na Drive.\nDesejas pedir que seja adicionado?",
-                    color=0xff0000
-                )
-                embed.add_field(name="💰 Preço Steam", value=jogo['price'], inline=True)
-                embed.add_field(name="🆔 AppID", value=jogo['appid'], inline=True)
-                embed.set_thumbnail(url=jogo['image'])
-                embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
-                
-                await interaction.followup.send(embed=embed, view=view)
-        except Exception as e:
-            await interaction.followup.send(f"❌ Erro ao pesquisar: {e}")
+        await send_drive_link_for_game(interaction, resultados[0])
     else:
         view = View()
         view.add_item(FileSelect(resultados))
-        embed = discord.Embed(
-            title=f"📁 Resultados para: {query}",
-            description="Seleciona um jogo para ver o link do Google Drive",
-            color=0x1b2838
-        )
-        for i, jogo in enumerate(resultados):
-            embed.add_field(
-                name=f"{i+1}. {jogo['name']}",
-                value=f"💰 {jogo['price']} | 🆔 {jogo['appid']}",
-                inline=False
-            )
+        embed = discord.Embed(title=f"📁 Resultados para: {query}", description="Seleciona um jogo", color=0x1b2838)
         embed.set_footer(text="Google Drive • Selecione uma opção")
         await interaction.followup.send(embed=embed, view=view)
 
