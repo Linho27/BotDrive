@@ -225,22 +225,35 @@ async def send_drive_link_for_game(interaction, jogo):
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
-            await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
+
+            if not interaction.response.is_done():
+                await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
+            else:
+                await interaction.followup.send(content=mensagem, ephemeral=True)
+
         else:
             view = View()
             view.add_item(PedirButton(jogo['name'], jogo['appid']))
 
             embed = discord.Embed(
                 title="❌ Ficheiro não encontrado",
-                description=f"Não encontrei o jogo `{jogo['name']}` na Drive.\nDeseja pedir que seja adicionado?",
+                description=f"Não encontrei o jogo `{jogo['name']}` na Drive.\nDesejas pedir que seja adicionado?",
                 color=0xff0000
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
-            await interaction.response.edit_message(embed=embed, view=view)
+            if not interaction.response.is_done():
+                await interaction.response.edit_message(embed=embed, view=view)
+            else:
+                await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     except Exception as e:
-        await interaction.response.edit_message(content=f"❌ Erro: {e}", embed=None, view=None)
+        erro_msg = f"❌ Erro: {e}"
+
+        if not interaction.response.is_done():
+            await interaction.response.edit_message(content=erro_msg, embed=None, view=None)
+        else:
+            await interaction.followup.send(content=erro_msg, ephemeral=True)
 
 # ================================
 # 🔧 Utilitários
