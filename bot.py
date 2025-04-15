@@ -226,10 +226,11 @@ async def send_drive_link_for_game(interaction, jogo):
             nome_sem_extensao = os.path.splitext(f['name'])[0]
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
 
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(content=mensagem, embed=None, view=None)  # sem suppress_embeds
-            else:
-                await interaction.followup.send(content=mensagem, ephemeral=True)
+            try:
+                await interaction.edit_original_response(content=mensagem, embed=None, view=None)
+                await interaction.original_response().edit(suppress=True)
+            except discord.NotFound:
+                await interaction.followup.send(content=mensagem, suppress_embeds=True, ephemeral=True)
 
         else:
             view = View()
@@ -242,18 +243,18 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
-            if not interaction.response.is_done():
-                await interaction.response.edit_message(embed=embed, view=view)
-            else:
+            try:
+                await interaction.edit_original_response(embed=embed, view=view)
+            except discord.NotFound:
                 await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     except Exception as e:
         erro_msg = f"❌ Erro: {e}"
-
-        if not interaction.response.is_done():
-            await interaction.response.edit_message(content=erro_msg, embed=None, view=None)
-        else:
+        try:
+            await interaction.edit_original_response(content=erro_msg, embed=None, view=None)
+        except:
             await interaction.followup.send(content=erro_msg, ephemeral=True)
+
 
 # ================================
 # 🔧 Utilitários
