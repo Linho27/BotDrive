@@ -227,10 +227,11 @@ async def send_drive_link_for_game(interaction, jogo):
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
 
             try:
+                # Se já tiver respondido, usamos followup, senão usamos a resposta original.
                 if interaction.response.is_done():
-                    await interaction.followup.send(content=mensagem, suppress_embeds=True, ephemeral=True)
+                    await interaction.followup.send(content=mensagem, suppress_embeds=True)
                 else:
-                    await interaction.response.send_message(content=mensagem, ephemeral=True, suppress_embeds=True)
+                    await interaction.response.send_message(content=mensagem, suppress_embeds=True)
             except Exception as e:
                 print(f"[ERRO] A enviar mensagem: {e}")
 
@@ -245,20 +246,22 @@ async def send_drive_link_for_game(interaction, jogo):
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
             try:
+                # Se já tiver respondido, usamos followup, senão usamos a resposta original.
                 if interaction.response.is_done():
-                    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+                    await interaction.followup.send(embed=embed, view=view)
                 else:
-                    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                    await interaction.response.send_message(embed=embed, view=view)
             except Exception as e:
                 print(f"[ERRO] A enviar embed: {e}")
 
     except Exception as e:
         erro_msg = f"❌ Erro: {e}"
         try:
+            # Enviamos a mensagem de erro visível para todos
             if interaction.response.is_done():
-                await interaction.followup.send(content=erro_msg, ephemeral=True)
+                await interaction.followup.send(content=erro_msg)
             else:
-                await interaction.response.send_message(content=erro_msg, ephemeral=True)
+                await interaction.response.send_message(content=erro_msg)
         except Exception as e2:
             print(f"[ERRO FATAL] A enviar mensagem de erro: {e2}")
 
