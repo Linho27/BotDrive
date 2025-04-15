@@ -215,27 +215,38 @@ class PedirButton(Button):
 # ================================
 async def send_drive_link_for_game(interaction, jogo):
     try:
+        # Consulta à API do Google Drive para encontrar o ficheiro correspondente
         query = f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and fullText contains '{jogo['appid']}' and mimeType != 'application/vnd.google-apps.folder'"
         url = f"https://www.googleapis.com/drive/v3/files?q={requests.utils.quote(query)}&key={GOOGLE_API_KEY}&fields=files(id,name,description)"
         response = session.get(url)
         files = response.json().get("files", [])
 
         if files:
+            # Recuperar o ficheiro encontrado
             f = files[0]
             link = f"https://drive.google.com/file/d/{f['id']}/view"
             nome_sem_extensao = os.path.splitext(f['name'])[0]
-            mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
+            mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"  # Link do arquivo
+
+            # Criar o embed para a mensagem
+            embed = discord.Embed(
+                title=f"Link para o jogo {jogo['name']}",
+                description=mensagem,
+                color=0x1b2838  # Cor do embed
+            )
+            embed.set_footer(text="Google Drive • Ficheiro Encontrado")
 
             try:
-                # Se já tiver respondido, usamos followup, senão usamos a resposta original.
+                # Enviar a mensagem com embed e link
                 if interaction.response.is_done():
-                    await interaction.followup.send(content=mensagem, suppress_embeds=True)
+                    await interaction.followup.send(embed=embed, suppress_embeds=True)
                 else:
-                    await interaction.response.send_message(content=mensagem, suppress_embeds=True)
+                    await interaction.response.send_message(embed=embed, suppress_embeds=True)
             except Exception as e:
-                print(f"[ERRO] A enviar mensagem: {e}")
+                print(f"[ERRO] A enviar mensagem com link: {e}")
 
         else:
+            # Se não encontrar o ficheiro, envia um embed dizendo que não encontrou
             view = View()
             view.add_item(PedirButton(jogo['name'], jogo['appid']))
             embed = discord.Embed(
@@ -246,18 +257,19 @@ async def send_drive_link_for_game(interaction, jogo):
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
             try:
-                # Se já tiver respondido, usamos followup, senão usamos a resposta original.
+                # Enviar a mensagem com embed e a opção de pedir o jogo
                 if interaction.response.is_done():
                     await interaction.followup.send(embed=embed, view=view)
                 else:
                     await interaction.response.send_message(embed=embed, view=view)
             except Exception as e:
-                print(f"[ERRO] A enviar embed: {e}")
+                print(f"[ERRO] A enviar embed de erro: {e}")
 
     except Exception as e:
+        # Caso ocorra um erro ao tentar procurar ou enviar a mensagem
         erro_msg = f"❌ Erro: {e}"
         try:
-            # Enviamos a mensagem de erro visível para todos
+            # Enviar uma mensagem de erro visível para todos
             if interaction.response.is_done():
                 await interaction.followup.send(content=erro_msg)
             else:
