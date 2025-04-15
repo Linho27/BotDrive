@@ -236,14 +236,11 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Google Drive • Ficheiro Encontrado")
 
-            try:
-                # Enviar a mensagem com embed e link
-                if interaction.response.is_done():
-                    await interaction.followup.send(embed=embed, suppress_embeds=True)
-                else:
-                    await interaction.response.send_message(embed=embed, suppress_embeds=True)
-            except Exception as e:
-                print(f"[ERRO] A enviar mensagem com link: {e}")
+            # Enviar a mensagem com o embed
+            if interaction.response.is_done():
+                await interaction.followup.send(content=mensagem, embed=embed, suppress_embeds=True)
+            else:
+                await interaction.response.send_message(content=mensagem, embed=embed, suppress_embeds=True)
 
         else:
             # Se não encontrar o ficheiro, envia um embed dizendo que não encontrou
@@ -256,14 +253,11 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
-            try:
-                # Enviar a mensagem com embed e a opção de pedir o jogo
-                if interaction.response.is_done():
-                    await interaction.followup.send(embed=embed, view=view)
-                else:
-                    await interaction.response.send_message(embed=embed, view=view)
-            except Exception as e:
-                print(f"[ERRO] A enviar embed de erro: {e}")
+            # Enviar a mensagem com embed e a opção de pedir o jogo
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, view=view)
+            else:
+                await interaction.response.send_message(embed=embed, view=view)
 
     except Exception as e:
         # Caso ocorra um erro ao tentar procurar ou enviar a mensagem
