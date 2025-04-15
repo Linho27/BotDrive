@@ -170,7 +170,7 @@ class PedirButton(Button):
                 )
                 embed.add_field(
                     name="👤 Usuário Solicitante", 
-                    value=f"{interaction.user.mention} (`{interaction.user.id}`)",
+                    value=f"{interaction.user.mention} ({interaction.user.id})",
                     inline=False
                 )
                 embed.add_field(
@@ -188,7 +188,7 @@ class PedirButton(Button):
 
                 embed = discord.Embed(
                     title="✅ Pedido enviado",
-                    description=f"Seu pedido para `{self.nome_jogo}` foi enviado ao Linho!",
+                    description=f"Seu pedido para {self.nome_jogo} foi enviado ao Linho!",
                     color=0x00ff00
                 )
                 await interaction.message.edit(embed=embed, view=None)
@@ -227,7 +227,7 @@ async def send_drive_link_for_game(interaction, jogo):
             mensagem = f"{emoji_str} [{nome_sem_extensao}]({link})"
 
             if not interaction.response.is_done():
-                await interaction.response.edit_message(content=mensagem, embed=None, view=None, suppress_embeds=True)
+                await interaction.response.edit_message(content=mensagem, embed=None, view=None)  # sem suppress_embeds
             else:
                 await interaction.followup.send(content=mensagem, ephemeral=True)
 
@@ -237,7 +237,7 @@ async def send_drive_link_for_game(interaction, jogo):
 
             embed = discord.Embed(
                 title="❌ Ficheiro não encontrado",
-                description=f"Não encontrei o jogo `{jogo['name']}` na Drive.\nDesejas pedir que seja adicionado?",
+                description=f"Não encontrei o jogo {jogo['name']} na Drive.\nDesejas pedir que seja adicionado?",
                 color=0xff0000
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
@@ -358,7 +358,7 @@ async def cmds(interaction: discord.Interaction):
     embed.add_field(name="/cmds", value="📜 Mostra esta lista de comandos", inline=False)
 
     embed.set_footer(text="Bot de Utilidades Steam + Google Drive")
-    await interaction.response.send_message(embed=embed) 
+    await interaction.response.send_message(embed=embed)
 
 # ================================
 # ▶️ Executar bot
