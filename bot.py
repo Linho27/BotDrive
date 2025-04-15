@@ -221,6 +221,7 @@ async def send_drive_link_for_game(interaction, jogo):
         response = session.get(url)
         files = response.json().get("files", [])
 
+        # Preparar a mensagem que será enviada
         if files:
             # Recuperar o ficheiro encontrado
             f = files[0]
@@ -236,14 +237,14 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Google Drive • Ficheiro Encontrado")
 
-            # Enviar a mensagem com o embed
+            # Enviar tudo numa única mensagem com embed
             if interaction.response.is_done():
                 await interaction.followup.send(content=mensagem, embed=embed, suppress_embeds=True)
             else:
                 await interaction.response.send_message(content=mensagem, embed=embed, suppress_embeds=True)
 
         else:
-            # Se não encontrar o ficheiro, envia um embed dizendo que não encontrou
+            # Se não encontrar o ficheiro, envia uma mensagem com embed dizendo que não encontrou
             view = View()
             view.add_item(PedirButton(jogo['name'], jogo['appid']))
             embed = discord.Embed(
@@ -253,7 +254,7 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Clique no botão abaixo para fazer o pedido")
 
-            # Enviar a mensagem com embed e a opção de pedir o jogo
+            # Enviar tudo numa única mensagem
             if interaction.response.is_done():
                 await interaction.followup.send(embed=embed, view=view)
             else:
