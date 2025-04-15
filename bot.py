@@ -237,7 +237,7 @@ async def send_drive_link_for_game(interaction, jogo):
             )
             embed.set_footer(text="Google Drive • Ficheiro Encontrado")
 
-            # Enviar tudo numa única mensagem com embed
+            # Se a resposta original não tiver sido já enviada, envia a mensagem com embed
             if interaction.response.is_done():
                 await interaction.followup.send(content=mensagem, embed=embed, suppress_embeds=True)
             else:
@@ -256,9 +256,9 @@ async def send_drive_link_for_game(interaction, jogo):
 
             # Enviar tudo numa única mensagem
             if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, view=view)
+                await interaction.followup.send(content=mensagem, embed=embed, view=view, suppress_embeds=True)
             else:
-                await interaction.response.send_message(embed=embed, view=view)
+                await interaction.response.send_message(content=mensagem, embed=embed, view=view, suppress_embeds=True)
 
     except Exception as e:
         # Caso ocorra um erro ao tentar procurar ou enviar a mensagem
